@@ -14,7 +14,6 @@ const readerSchema = new mongoose.Schema({
     {
       bookId: {
         type: Number,
-        ref: "Book",
         required: true
       },
 
@@ -22,9 +21,10 @@ const readerSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       }
-    }
-  ]
+    },
+    
+  ],
 });
 
-const Reader = new mongoose.Schema('Reader', readerSchema);
+const Reader = mongoose.model('Reader', readerSchema);
 export default Reader;
