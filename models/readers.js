@@ -10,10 +10,20 @@ const readerSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  booksTaken: {
-    type: [Number],
-    default: []
-  }
+  booksTaken: [
+    {
+      bookId: {
+        type: Number,
+        ref: "Book",
+        required: true
+      },
+
+      takenAt: {
+        type: Date,
+        default: Date.now,
+      }
+    }
+  ]
 });
 
 const Reader = new mongoose.Schema('Reader', readerSchema);

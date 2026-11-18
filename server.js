@@ -9,13 +9,11 @@ const app = express();
 
 app.use(express.json());
 
-connectDB();
-
 app.get("/", (req, res) => {
   res.send("Server is running! ");
 });
 
-//add books
+//C: add books
 app.post("/books", async (req, res) => {
   try {
     const book = await Book.create(req.body);
@@ -23,13 +21,19 @@ app.post("/books", async (req, res) => {
       message: "Book added Successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "A book with this ID already exists",
+      });
+    }
+
+    return res.status(500).json({
       message: error.message,
     });
   }
 });
 
-//Read books
+//R: Read books
 app.get("/books", async (req, res) => {
   try {
     const books = await Book.find();
@@ -47,8 +51,11 @@ app.get("/books", async (req, res) => {
 
 app.get("/books/:id", async (req, res) => {
   try {
+    // console.log(req.params.id);
+    // console.log(Number(req.params.id));
+
     const book = await Book.findOne({
-        bookId: Number(req.params.bookId)
+      bookId: Number(req.params.id),
     });
 
     if (!book) {
@@ -56,6 +63,7 @@ app.get("/books/:id", async (req, res) => {
         message: "Book not found",
       });
     }
+    return res.status(200).json(book);
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -63,6 +71,86 @@ app.get("/books/:id", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+//U: Update book details
+app.patch("/books/:id", async (req, res) => {
+  try {
+    const bookId = Number(req.params.id);
+
+    if (!Number.isInteger(bookId)) {
+      return res.status(400).json({
+        message: "Invalid Book ID",
+      });
+    }
+
+    const { bookName, author } = req.body;
+    const updatedBook = await Book.findOneAndUpdate(
+      { bookId: bookId },
+      {
+        bookName,
+        author,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedBook) {
+      return res.status(404).json({
+        message: "Book not Found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Book Updated",
+      oldbook: Book,
+      updatedbook: updatedBook,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
 });
+
+//D: delete a book
+app.delete("/books/:id", async (req, res) => {
+  try {
+    const bookId = Number(req.params.id);
+
+    const deletedBook = await Book.findOneAndDelete({ bookId: bookId });
+
+    if (!deletedBook) {
+      return res.status(404).json({
+        message: "Book not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Deleted",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: "Error while deletion",
+      err,
+    });
+  }
+});
+
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(3000, () => {
+      console.log("Server running on port 3000");
+    });
+  } catch (err) {
+    console.log("Error starting server!");
+  }
+};
+
+// app.listen(3000, () => {
+//   console.log("Server running on port 3000");
+// });
+
+startServer();
