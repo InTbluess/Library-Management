@@ -184,22 +184,117 @@ app.get("/reader/:id", async (req, res) => {
 //===========================================================
 app.patch("/reader/:userId/borrow/:bookId", async (req, res) => {
   try {
-    const userID = Number(req.params.userId);
-    const bookID = Number(req.params.bookId);
+    // console.log("IT runs", req.params);
 
-    if(!Number.isInteger(userID) || !Number.isInteger(bookID)){
+    const userId = Number(req.params.userId);
+    const bookId = Number(req.params.bookId);
+
+    if (!Number.isInteger(userId) || !Number.isInteger(bookId)) {
       return res.status(400).json({
-        message: "Invalid useridi or bookid"
-      })
+        message: "Invalid useridi or bookid",
+      });
     }
 
-    
+    const reader = await Reader.findOne({ userId });
+    if (!reader) {
+      return res.status(404).json({
+        message: "Reader not found",
+      });
+    }
+    // console.log("Reader found")
 
+    const book = await Book.findOne({ bookId });
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found",
+      });
+    }
+    // console.log("Book found")
+
+    const alreadyBorrowed = reader.booksTaken.some(
+      (item) => item.bookId === bookId,
+    );
+
+    if (alreadyBorrowed) {
+      return res.status(200).json({
+        message: "Reader already has borrowed this book",
+      });
+    }
+
+    reader.booksTaken.push({
+      bookId: bookId,
+      takenAt: new Date(),
+    });
+
+    await reader.save();
+
+    return res.status(200).json({
+      message: "Book borrowed successfully",
+      reader,
+    });
   } catch (err) {
-    return res.status(500).json(err)
+    return res.status(500).json({
+      message: "Error borrowing book",
+    });
   }
 });
-app.patch("/reader/:userId/return/:bookId", async (req, res) => {});
+
+//return
+app.patch("/reader/:userId/return/:bookId", async (req, res) => {
+  try {
+    console.log("return runs", req.params);
+
+    const userId = Number(req.params.userId);
+    const bookId = Number(req.params.bookId);
+
+    if (!Number.isInteger(userId) || !Number.isInteger(bookId)) {
+      return res.status(400).json({
+        message: "Invalid userid or bookid",
+      });
+    }
+
+    const reader = await Reader.findOne({ userId });
+    if (!reader) {
+      return res.status(404).json({
+        message: "Reader not found",
+      });
+    }
+    // console.log("Reader found")
+
+    const book = await Book.findOne({ bookId });
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found",
+      });
+    }
+    // console.log("Book found")
+
+    const ifBorrowed = reader.booksTaken.some(
+      (item) => item.bookId === bookId,
+    );
+
+    if (ifBorrowed) {
+      reader.booksTaken = reader.booksTaken.filter(
+        (item) => item.bookId !== bookId
+      )
+      await reader.save();
+
+      return res.status(200).json({
+        message: `Reader returned book ${bookId}`,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Reader has not borrowed this book",
+      reader,
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      message: "Error Returning book",
+    });
+  }
+});
 
 //=======Serverr===============================================
 const startServer = async () => {
